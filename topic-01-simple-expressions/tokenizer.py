@@ -1,12 +1,7 @@
 import re
 from pprint import pprint
 
-# p = re.compile("ab*")
 
-# if p.match("abbbbbbb") :
-#     print("match")
-# else:
-#     print("not match")
 
 patterns = [
     (r"\s+", "whitespace"),
@@ -15,6 +10,7 @@ patterns = [
     (r"\-", "-"),
     (r"\/", "/"),
     (r"\*", "*"),
+    (r"%", "%"),
     (r"\(", "("),
     (r"\)", ")"),
     (r".", "error"),
@@ -32,18 +28,24 @@ def tokenize(characters):
     current_tag = None
 
     while position < len(characters):
+        # try each pattern at the current position until one matches
         for pattern, tag in patterns:
             match = pattern.match(characters, position)
             if match:
+                # found something - remember its tag
                 current_tag = tag
                 break
         assert match is not None
         value = match.group(0)
 
+        # if nothing matched in our patterns (shouldn't happen because of '.'),
+        # we raise a helpful exception mentioning the unexpected character.
         if current_tag == "error":
             raise Exception(f"Unexpected character: {value!r}")
 
+        # skip whitespace tokens — they're not useful for parsing
         if tag != "whitespace":
+            # build a token dict — numbers also carry their integer value
             token = {"tag": current_tag, "line": line, "column": column}
             if current_tag == "number":
                 token["value"] = int(value)
@@ -58,6 +60,7 @@ def tokenize(characters):
                 column += 1
         position = match.end()
 
+    # sentinel token marking end of input
     tokens.append({"tag": None, "line": line, "column": column})
     return tokens
 
@@ -76,9 +79,9 @@ def test_digits():
 
 def test_operators():
     print("test tokenize operators")
-    t = tokenize("+ - * / ( )")
+    t = tokenize("+ - * / % ( )")
     tags = [tok["tag"] for tok in t]
-    assert tags == ["+", "-", "*", "/", "(", ")", None]
+    assert tags == ["+", "-", "*", "/", "%", "(", ")", None]
 
 
 def test_expressions():

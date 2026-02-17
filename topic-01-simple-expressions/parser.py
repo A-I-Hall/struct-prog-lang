@@ -3,20 +3,18 @@
 from tokenizer import tokenize
 from pprint import pprint
 
-# EBNF
 
-#   expression = term { ("+" | "-") term }
-#   term = factor { ("*" | "/") factor }
-#   factor = <number> | "(" expression ")"
 
 
 def parse_factor(tokens):
     """factor = <number>"""
     token = tokens[0]
     if token["tag"] == "number":
+        # leaf node: just a number
         node = {"tag": "number", "value": token["value"]}
         return node, tokens[1:]
     if token["tag"] == "(":
+        # parentheses: parse the sub-expression inside them
         node, tokens = parse_expression(tokens[1:])
         if tokens[0]["tag"] != ")":
             raise SyntaxError(f"Expected ')', got {tokens[0]}")
@@ -39,9 +37,11 @@ def test_parse_factor():
 
 
 def parse_term(tokens):
-    """term = factor { ("*" | "/") factor }"""
+    """term = factor { ("*" | "/" | "%") factor }"""
+    # term handles *, / and % (same precedence)
     left, tokens = parse_factor(tokens)
-    while tokens[0]["tag"] in ["*", "/"]:
+    # as long as we see a term-level operator, consume it and make a node
+    while tokens[0]["tag"] in ["*", "/", "%"]:
         op = tokens[0]["tag"]
         right, tokens = parse_factor(tokens[1:])
         left = {"tag": op, "left": left, "right": right}
@@ -87,6 +87,7 @@ def test_parse_term():
 
 def parse_expression(tokens):
     """expression = term { ("+" | "-") term }"""
+    # expression handles + and - (lower precedence than term)
     left, tokens = parse_term(tokens)
     while tokens[0]["tag"] in ["+", "-"]:
         op = tokens[0]["tag"]
